@@ -1,5 +1,4 @@
-﻿using NModbus;
-using NModbus.Device;
+﻿using Modbus.Device;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
@@ -25,16 +24,21 @@ namespace wpf_modbus_test
     {
         private SerialPort serialPort;
         private IModbusMaster modbusMaster;
+        private string rbxRWMsg;
+
+        private byte slaveId = 1;           // 从站地址
+        private ushort startAddress = 183;    // 寄存器起始地址
+        private ushort numRegisters = 7;   // 要读取的寄存器数量
 
         public MainWindow()
         {
             InitializeComponent();
 
-            string portName = "COM2";
+            string portName = "COM3";
             int baudRate = 9600;
             int dataBits = 8;
             Parity parity = Parity.None;
-            StopBits stopBits =  StopBits.One;
+            StopBits stopBits = StopBits.One;
 
             serialPort = new SerialPort(portName);
             serialPort.BaudRate = baudRate;
@@ -44,36 +48,89 @@ namespace wpf_modbus_test
 
             try
             {
-                // 打开串口
                 serialPort.Open();
-                var factory = new ModbusFactory();
-                // 创建Modbus主站
-                modbusMaster = factory.CreateRtuMaster(serialPort);
+                modbusMaster = ModbusSerialMaster.CreateRtu(serialPort);
+
 
                 // 从Modbus从站读取数据
-                byte slaveId = 1;           // 从站地址
-                ushort startAddress = 0;    // 寄存器起始地址
-                ushort numRegisters = 10;   // 要读取的寄存器数量
 
-                ushort[] data = modbusMaster.ReadHoldingRegisters(slaveId, startAddress, numRegisters);
+                //ushort[] data = modbusMaster.ReadHoldingRegisters(slaveId, startAddress, numRegisters);
 
+                //SetMsg(data);
                 // 输出读取的数据
-                for (int i = 0; i < data.Length; i++)
-                {
-                    Console.WriteLine($"Register {startAddress + i}: {data[i]}");
-                }
+                //for (int i = 0; i < data.Length; i++)
+                //{
+                //    var addr = startAddress + i;
+                //    var item = data[i];
+                    
+                //    Console.WriteLine($"Register {startAddress + i}: {data[i]}");
+                //}
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error:{ex.Message}");
             }
-            finally
+            finally 
             {
-                if (serialPort != null && serialPort.IsOpen) 
-                {
-                    serialPort.Close();
-                }
+                //if (serialPort != null && serialPort.IsOpen)
+                //{
+                //    serialPort.Close();
+                //}
             }
+        }
+
+        /// <summary>
+        /// 读取输出线圈
+        /// </summary>
+        /// <returns></returns>
+        private bool[] ReadCoils()
+        {
+            return modbusMaster.ReadCoils(slaveId, startAddress, numRegisters);
+        }
+
+        /// <summary>
+        /// 读取输入线圈
+        /// </summary>
+        /// <returns></returns>
+        private bool[] ReadInputs()
+        {
+            return modbusMaster.ReadInputs(slaveId, startAddress, numRegisters);
+        }
+
+        /// <summary>
+        /// 读取保持型寄存器
+        /// </summary>
+        /// <returns></returns>
+        private ushort[] ReadHoldingRegisters()
+        {
+            return modbusMaster.ReadHoldingRegisters(slaveId, startAddress, numRegisters);
+        }
+
+        /// <summary>
+        /// 读取输入寄存器
+        /// </summary>
+        /// <returns></returns>
+        private ushort[] ReadInputRegisters()
+        {
+            return modbusMaster.ReadInputRegisters(slaveId, startAddress, numRegisters);
+        }
+
+        public void SetMsg<T>(List<T> result)
+        {
+            string msg = string.Empty;
+
+            result.ForEach(m => msg += $"{m}");
+
+            rbxRWMsg = msg.Trim();
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            rbxRWMsg = "";
+
+            SetMsg(ReadHoldingRegisters().ToList());
+
+            MessageBox.Show(rbxRWMsg);
         }
     }
 }
